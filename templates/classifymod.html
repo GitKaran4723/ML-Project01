@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Image Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        input {
+            margin-bottom: 16px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: #fff;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        #result {
+            margin-top: 20px;
+        }
+        
+        #resultImage {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+
+        #predictionResult {
+            display: none;
+        }
+
+        #accuracyChart {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    {% include "navbar.html" %}
+    <!-- Your existing code for navbar and container -->
+
+    <div id="predictionResult">
+        <h2>Prediction Result:</h2>
+        <p id="predictionText"></p>
+        <canvas id="accuracyChart" width="400" height="200"></canvas>
+    </div>
+
+    <script>
+        let selectedImage;
+        let selectedImageURL;
+
+        async function analyzeImage() {
+            if (!selectedImage) {
+                alert('Please choose an image before analyzing.');
+                return;
+            }
+
+            // Use the selectedImageURL as the relative path
+            const relativePath = selectedImage.name;
+
+            // Send the relative path to the Flask API for prediction
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: relativePath }),
+            });
+
+            // Parse the response JSON
+            const result = await response.json();
+
+            console.log(result);
+
+            // Display the prediction result and accuracy
+            document.getElementById("predictionText").textContent = `Prediction: ${result.prediction}`;
+            displayAccuracyChart(result.accuracy);
+
+            // Show the prediction result div
+            document.getElementById("predictionResult").style.display = "block";
+        }
+
+        function displayAccuracyChart(accuracy) {
+            // Use a simple chart library like Chart.js to display accuracy
+            const ctx = document.getElementById('accuracyChart').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'horizontalBar',
+                data: {
+                    labels: ['Accuracy'],
+                    datasets: [{
+                        label: 'Accuracy',
+                        data: [accuracy],
+                        backgroundColor: ['rgba(75, 192, 192, 0.2)'],
+                        borderColor: ['rgba(75, 192, 192, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                callback: function (value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

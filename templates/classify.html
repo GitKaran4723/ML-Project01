@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Upload</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 50px auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+      }
+
+      label {
+        margin-bottom: 8px;
+        font-weight: bold;
+      }
+
+      input {
+        margin-bottom: 16px;
+      }
+
+      button {
+        background-color: #007bff;
+        color: #fff;
+        padding: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      #result {
+        margin-top: 20px;
+      }
+
+      #resultImage {
+        max-width: 100%;
+        margin-top: 10px;
+      }
+
+      #predictionResult {
+        display: none;
+      }
+
+      #loadingOverlay {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      #loadingLine {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 100%;
+        background-color: #000;
+        animation: scan 2s linear infinite;
+      }
+
+      @keyframes scan {
+        0% {
+          left: 0;
+          width: 0;
+        }
+        50% {
+          left: 50%;
+          width: 0;
+        }
+        100% {
+          left: 100%;
+          width: 0;
+        }
+      }
+      .imageContainer {
+        position: relative;
+      }
+      #predictionText {
+        font-size: 20px;
+      }
+
+      .buffering-wheel-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 20vh; /* Ensures the container covers the full height of the viewport */
+      }
+
+      /* Style for the buffering wheel */
+      .buffering-wheel {
+        width: 50px;
+        height: 50px;
+        border: 6px solid rgba(0, 0, 0, 0.1);
+        border-top-color: #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite; /* This line animates the spinning */
+        display: none; /* Initially hidden */
+      }
+
+      /* Keyframes for the spinning animation */
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+
+  <body>
+    {% include "navbar.html" %}
+    <div class="container">
+      <h1>Image Analysis</h1>
+      <form id="imageForm" enctype="multipart/form-data">
+        <label for="image">Upload Image:</label>
+        <input
+          type="file"
+          id="image"
+          name="image"
+          accept="image/*"
+          required
+          onchange="previewImage()"
+        />
+
+        <div class="imageContainer">
+          <img
+            id="preview"
+            alt="Selected Image"
+            style="display: none; max-width: 100%; margin-top: 10px"
+          />
+        </div>
+
+        <button type="button" onclick="analyzeImage()">
+          X-ray Image Analysis
+        </button>
+      </form>
+
+      <div class="buffering-wheel-container">
+        <!-- The buffering wheel -->
+        <div id="bufferingWheel" class="buffering-wheel"></div>
+        <div id="predictionResult">
+          <h2 id="prediction_head"></h2>
+          <p id="predictionText"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let selectedImage;
+
+      const analysisDiv = document.getElementById("predictionText");
+      const analusisHead = document.getElementById("prediction_head");
+
+      function showBufferingWheel() {
+        document.getElementById("bufferingWheel").style.display = "block";
+      }
+
+      // Function to hide the buffering wheel
+      function hideBufferingWheel() {
+        document.getElementById("bufferingWheel").style.display = "none";
+      }
+
+      function previewImage() {
+        const input = document.getElementById("image");
+        const preview = document.getElementById("preview");
+
+        if (input.files && input.files[0]) {
+          selectedImage = input.files[0];
+
+          const reader = new FileReader();
+
+          reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+          };
+
+          reader.readAsDataURL(selectedImage);
+        }
+      }
+
+      async function analyzeImage() {
+        analysisDiv.textContent = "";
+        analusisHead.textContent = "";
+
+        if (!selectedImage) {
+          alert("Please choose an image before analyzing.");
+          return;
+        }
+
+        // Create a FormData object and append the selected file with the key 'file'
+        const formData = new FormData();
+        formData.append("file", selectedImage);
+
+        console.log(`Analyzing ${selectedImage.name}...`);
+
+        // Show the buffering wheel while the image is being analyzed
+        showBufferingWheel();
+
+        try {
+          // Send the FormData object to the Flask API for prediction
+          const response = await fetch("/predict", {
+            method: "POST",
+            body: formData,
+          });
+
+          // Hide the buffering wheel after the prediction is received
+          hideBufferingWheel();
+
+          console.log(response);
+
+          // Check if the response is successful (status code 200)
+          if (response.ok) {
+            // Parse the response JSON
+            const result = await response.json();
+
+            console.log(result);
+
+            // Display the prediction result and accuracy
+            accuracy = result.accuracy;
+            if (result.prediction === "NORMAL") {
+              accuracy = 1 - accuracy;
+            }
+            displayPredictionResult(result.prediction, accuracy);
+
+            // Show the prediction result div
+            document.getElementById("predictionResult").style.display = "block";
+          } else {
+            // If the API call is not successful, show an error message
+            alert(`Error: ${response.statusText}`);
+          }
+        } catch (error) {
+          // Handle any unexpected errors
+          console.error("An error occurred:", error);
+          alert("An error occurred. Please try again.");
+        }
+      }
+
+      function displayPredictionResult(prediction, accuracy) {
+        // Display prediction result and accuracy in the analysis div
+        if (prediction == "nonXray") {
+          analusisHead.textContent = "Non-X-ray Image";
+          analysisDiv.style.color = "red";
+          analysisDiv.textContent = "The uploaded image is not an X-ray image.";
+        } else {
+          analusisHead.textContent = "Prediction Result";
+
+          if (prediction == "NORMAL") {
+            analysisDiv.style.color = "green";
+            analysisDiv.textContent = `This is a NORMAL X-ray image.`;
+          } else {
+            analysisDiv.style.color = "red";
+            analysisDiv.textContent = `PNEMONIA detected in X-ray image.`;
+          }
+
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Your Website</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Arial", sans-serif;
+        width: 100vw;
+      }
+
+      .navbar {
+        background-color: #3498db;
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        color: #fff;
+        font-size: 1.5em;
+      }
+
+      .nav-list {
+        list-style: none;
+        display: flex;
+      }
+
+      .nav-list li {
+        margin: 0 15px;
+      }
+
+      .nav-list a {
+        text-decoration: none;
+        color: #fff;
+        font-weight: bold;
+        transition: color 0.4s;
+      }
+
+      .nav-list a:hover {
+        color: #ecf0f1;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="logo">Pneumo-Detector</div>
+      <ul class="nav-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="classify">Classify</a></li>
+        <li><a href="ChatBot">ChatBot</a></li>
+      </ul>
+    </nav>
+  </body>
+</html>

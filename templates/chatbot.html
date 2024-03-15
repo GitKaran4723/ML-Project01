@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatBoat</title>
+    <style>
+      body {
+        font-family: "Roboto", sans-serif; /* Use Roboto font */
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        height: 100vh;
+      }
+
+      h1 {
+        font-family: "Roboto", sans-serif; /* Apply Roboto font to headers */
+        color: #333;
+        margin-bottom: 20px; /* Add some spacing below the heading */
+      }
+
+      form {
+        margin-top: 20px;
+      }
+
+      label {
+        font-size: 18px;
+        color: #333;
+        margin-right: 10px;
+      }
+
+      input {
+        padding: 8px;
+        font-size: 16px;
+        width: 300px;
+        margin-right: 10px; /* Add some spacing to the right of the input */
+      }
+
+      button {
+        padding: 8px 15px;
+        font-size: 16px;
+        background-color: #4caf50;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      #result {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        text-align: left;
+      }
+      #chat-container {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin: 2%;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+
+      form {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+      }
+
+      button {
+        background-color: #4caf50;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      #result {
+        margin-top: 20px;
+        border-top: 2px solid #ddd;
+        padding-top: 20px;
+        width: 60%;
+      }
+
+      .buffering-wheel-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        /* Ensures the container covers the full height of the viewport */
+      }
+
+      /* Style for the buffering wheel */
+      .buffering-wheel {
+        width: 50px;
+        height: 50px;
+        border: 6px solid rgba(0, 0, 0, 0.1);
+        border-top-color: #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite; /* This line animates the spinning */
+        display: none; /* Initially hidden */
+      }
+
+      /* Keyframes for the spinning animation */
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {% include "navbar.html" %}
+    <div class="buffering-wheel-container">
+      <div id="chat-container">
+        <h1>Neemo-Bot</h1>
+        <form id="queryForm" onsubmit="submitQuery(); return false;">
+          <label for="query">Enter your query:</label>
+          <input type="text" id="query" name="query" required />
+          <button type="submit">Submit</button>
+        </form>
+      </div>
+
+      <div id="bufferingWheel" class="buffering-wheel"></div>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      function showBufferingWheel() {
+        document.getElementById("result").style.display = "none";
+        document.getElementById("bufferingWheel").style.display = "block";
+      }
+
+      // Function to hide the buffering wheel
+      function hideBufferingWheel() {
+        document.getElementById("bufferingWheel").style.display = "none";
+        document.getElementById("result").style.display = "block";
+      }
+
+      async function submitQuery() {
+        showBufferingWheel();
+
+        const query = document.getElementById("query").value;
+
+        try {
+          // Send the query to the backend
+          const response = await fetch(`/solve`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `query=${encodeURIComponent(query)}`,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const data = await response.text(); // Read the response body as text
+          console.log(data); // Log the data for debugging
+
+          document.getElementById(
+            "result"
+          ).innerHTML = `<h3>You said : ${query}</h3> ${formatResponse(data)}`;
+          document.getElementById("query").value = ""; // Clear the input field
+        } catch (error) {
+          console.error("Error:", error);
+        } finally {
+          hideBufferingWheel(); // Hide the buffering wheel regardless of success or failure
+        }
+
+        return false; // Prevent the default form submission behavior
+      }
+
+      function convertToCodeBlock(text) {
+        const codeBlockRegex = /```([\s\S]*?)```/g;
+
+        return text.replace(codeBlockRegex, (match, code) => {
+          // Replace each code block with the appropriate HTML or formatting
+          return `<pre><code>${escapeHtml(code)}</code></pre>`;
+        });
+      }
+
+      function escapeHtml(html) {
+        // Function to escape special characters in HTML
+        const escapeChars = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        };
+
+        return html.replace(/[&<>"']/g, (match) => escapeChars[match]);
+      }
+
+      function formatResponse(response) {
+        // Split the response into paragraphs
+        const paragraphs = response.split("\n");
+
+        // Format each paragraph
+        const formattedParagraphs = paragraphs.map((paragraph) => {
+          // Highlight text between ** and remove the **
+          paragraph = paragraph.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
+          );
+
+          // Treat a line with a single * as an unordered list item
+          if (/^\s*\*\s+(.+)\s*$/.test(paragraph)) {
+            return `<ul><li>${RegExp.$1}</li></ul>`;
+          }
+
+          return `<p>${paragraph.trim()}</p>`;
+        });
+
+        // Join the formatted paragraphs into a single HTML string
+        const formattedResponse = formattedParagraphs.join("");
+
+        return formattedResponse;
+      }
+    </script>
+  </body>
+</html>
